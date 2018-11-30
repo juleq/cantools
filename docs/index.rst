@@ -14,22 +14,34 @@ CAN BUS tools
 Functions and classes
 =====================
 
-.. autofunction:: cantools.db.load_file
+.. autofunction:: cantools.database.load_file
 
-.. autofunction:: cantools.db.load_string
+.. autofunction:: cantools.database.load_string
 
-.. autofunction:: cantools.db.load
+.. autofunction:: cantools.database.load
 
-.. autoclass:: cantools.db.Database
+.. autoclass:: cantools.database.can.Database
     :members:
 
-.. autoclass:: cantools.db.Message
+.. autoclass:: cantools.database.can.Message
     :members:
 
-.. autoclass:: cantools.db.Signal
+.. autoclass:: cantools.database.can.Signal
     :members:
 
-.. autoclass:: cantools.db.UnsupportedDatabaseFormatError
+.. autoclass:: cantools.database.can.signal.Decimal
+    :members:                      
+
+.. autoclass:: cantools.database.diagnostics.Database
+    :members:
+
+.. autoclass:: cantools.database.diagnostics.Did
+    :members:
+
+.. autoclass:: cantools.database.diagnostics.Data
+    :members:
+
+.. autoclass:: cantools.database.UnsupportedDatabaseFormatError
     :members:
 
 .. autoclass:: cantools.tester.Tester
@@ -56,7 +68,7 @@ based on my personal preference.
 
 - Two blank lines between file level definitions (2).
 
-- Space before and after operators (3), except for keywork arguments
+- Space before and after operators (3), except for keyword arguments
   where no space is allowed (4).
 
 - One import per line (5).

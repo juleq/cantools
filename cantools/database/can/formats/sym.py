@@ -1,7 +1,9 @@
 # Load and dump a CAN database in SYM format.
 
 import logging
-from collections import OrderedDict
+from collections import OrderedDict as odict
+from decimal import Decimal
+
 from pyparsing import Word
 from pyparsing import Literal
 from pyparsing import Keyword
@@ -21,11 +23,12 @@ from pyparsing import ParseException
 from pyparsing import ParseSyntaxException
 
 from ..signal import Signal
+from ..signal import Decimal as SignalDecimal
 from ..message import Message
 from ..internal_database import InternalDatabase
 
 from .utils import num
-from .utils import ParseError
+from ...errors import ParseError
 
 
 LOGGER = logging.getLogger(__name__)
@@ -158,8 +161,7 @@ def _load_enums(tokens):
     enums = {}
 
     for name, values in section:
-        enums[name] = OrderedDict(
-            (num(v[0]), v[1]) for v in values)
+        enums[name] = odict((num(v[0]), v[1]) for v in values)
 
     return enums
 
@@ -177,7 +179,8 @@ def _load_signal(tokens, enums):
     maximum = None
     enum = None
     length = 0
-
+    decimal = SignalDecimal(Decimal(factor), Decimal(offset))
+    
     # Type and length.
     type_ = tokens[1]
 
@@ -208,12 +211,16 @@ def _load_signal(tokens, enums):
             unit = value
         elif key == '/f:':
             factor = num(value)
+            decimal.scale = Decimal(value)
         elif key == '/o:':
             offset = num(value)
+            decimal.offset = Decimal(value)
         elif key == '/min:':
             minimum = num(value)
+            decimal.minimum = Decimal(value)
         elif key == '/max:':
             maximum = num(value)
+            decimal.maximum = Decimal(value)
         elif key == '/e:':
             enum = enums[value]
         else:
@@ -232,7 +239,8 @@ def _load_signal(tokens, enums):
                   unit=unit,
                   choices=enum,
                   is_multiplexer=False,
-                  is_float=is_float)
+                  is_float=is_float,
+                  decimal=decimal)
 
 
 def _load_signals(tokens, enums):
@@ -272,7 +280,8 @@ def _load_message_signal(tokens,
                   is_multiplexer=signal.is_multiplexer,
                   multiplexer_ids=multiplexer_ids,
                   multiplexer_signal=multiplexer_signal,
-                  is_float=signal.is_float)
+                  is_float=signal.is_float,
+                  decimal=signal.decimal)
 
 
 def _load_message_signals_inner(message_tokens,
@@ -338,7 +347,8 @@ def _load_message(frame_id,
                   is_extended_frame,
                   message_tokens,
                   message_section_tokens,
-                  signals):
+                  signals,
+                  strict):
     # Default values.
     name = message_tokens[0]
     length = int(message_tokens[2][1])
@@ -361,7 +371,8 @@ def _load_message(frame_id,
                                                  message_section_tokens,
                                                  signals),
                    comment=None,
-                   bus_name=None)
+                   bus_name=None,
+                   strict=strict)
 
 
 def _parse_message_frame_ids(message):
@@ -381,7 +392,7 @@ def _parse_message_frame_ids(message):
     return frame_ids, is_extended_frame(minimum)
 
 
-def _load_message_section(section_name, tokens, signals):
+def _load_message_section(section_name, tokens, signals, strict):
     def has_frame_id(message):
         return len(message[1]) > 0
 
@@ -399,16 +410,17 @@ def _load_message_section(section_name, tokens, signals):
                                     is_extended_frame,
                                     message_tokens,
                                     message_section_tokens,
-                                    signals)
+                                    signals,
+                                    strict)
             messages.append(message)
 
     return messages
 
 
-def _load_messages(tokens, signals):
-    messages = _load_message_section('{SEND}', tokens, signals)
-    messages += _load_message_section('{RECEIVE}', tokens, signals)
-    messages += _load_message_section('{SENDRECEIVE}', tokens, signals)
+def _load_messages(tokens, signals, strict):
+    messages = _load_message_section('{SEND}', tokens, signals, strict)
+    messages += _load_message_section('{RECEIVE}', tokens, signals, strict)
+    messages += _load_message_section('{SENDRECEIVE}', tokens, signals, strict)
 
     return messages
 
@@ -417,7 +429,7 @@ def _load_version(tokens):
     return tokens[0][1]
 
 
-def load_string(string):
+def load_string(string, strict=True):
     """Parse given string.
 
     """
@@ -440,7 +452,7 @@ def load_string(string):
     version = _load_version(tokens)
     enums = _load_enums(tokens)
     signals = _load_signals(tokens, enums)
-    messages = _load_messages(tokens, signals)
+    messages = _load_messages(tokens, signals, strict)
 
     return InternalDatabase(messages,
                             [],

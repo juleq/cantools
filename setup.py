@@ -7,7 +7,7 @@ import re
 
 def find_version():
     return re.search(r"^__version__ = '(.*)'$",
-                     open('cantools/__init__.py', 'r').read(),
+                     open('cantools/version.py', 'r').read(),
                      re.MULTILINE).group(1)
 
 
@@ -27,9 +27,11 @@ setup(name='cantools',
       url='https://github.com/eerimoq/cantools',
       packages=find_packages(exclude=['tests']),
       install_requires=[
-          'bitstruct>=3.7.0',
+          'bitstruct>=6.0.0',
           'pyparsing>=2.0.3',
-          'python-can>=2.1.0'
+          'python-can>=2.1.0',
+          'textparser',
+          'diskcache'
       ],
       test_suite="tests",
       entry_points = {

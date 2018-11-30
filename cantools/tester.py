@@ -14,9 +14,7 @@ except ImportError:
 
 import can
 
-
-class Error(Exception):
-    pass
+from .errors import Error
 
 
 class DecodedMessage(object):
@@ -212,7 +210,7 @@ class Message(UserDict, object):
 class Tester(object):
     """Test given node `dut_name` on given CAN bus `bus_name`.
 
-    `database` is a :class:`~cantools.db.Database` instance.
+    `database` is a :class:`~cantools.database.can.Database` instance.
 
     `can_bus` a CAN bus object, normally created using the python-can
     package.
@@ -228,7 +226,7 @@ class Tester(object):
     >>> can.rc['interface'] = 'socketcan_native'
     >>> can.rc['channel'] = 'vcan0'
     >>> can_bus = can.interface.Bus()
-    >>> database = cantools.db.load_file('tests/files/tester.kcd')
+    >>> database = cantools.database.load_file('tests/files/tester.kcd')
     >>> tester = cantools.tester.Tester('PeriodicConsumer', database, can_bus, 'PeriodicBus')
 
     """

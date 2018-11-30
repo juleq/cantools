@@ -56,4 +56,14 @@ docs/_build/
 # PyBuilder
 target/
 
+# CANdb++
+/tests/files/*.ini
+
+# Example outputs
 examples/dbc_io/dbc_output.dbc
+
+cantools-database-cache/
+test_command_line_convert.dbc
+test_command_line_convert.kcd
+/*.[hc]
+/a.out

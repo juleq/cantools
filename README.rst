@@ -6,15 +6,21 @@ About
 
 CAN BUS tools.
 
-- `DBC`_, `KCD`_ and SYM file parsing.
+- `DBC`_, `KCD`_, SYM and CDD file parsing.
 
 - CAN message encoding and decoding.
 
 - Simple and extended signal multiplexing.
 
+- Diagnostic DID encoding and decoding.
+
 - ``candump`` output decoder.
 
 - Node `tester`_.
+
+- `C` source code generator.
+
+- CAN bus monitor.
 
 Project homepage: https://github.com/eerimoq/cantools
 
@@ -40,7 +46,7 @@ messages and signals.
 
    >>> import cantools
    >>> from pprint import pprint
-   >>> db = cantools.db.load_file('tests/files/motohawk.dbc')
+   >>> db = cantools.database.load_file('tests/files/motohawk.dbc')
    >>> db.messages
    [message('ExampleMessage', 0x1f0, False, 8, 'Example message used as template in MotoHawk models.')]
    >>> example_message = db.get_message_by_name('ExampleMessage')
@@ -55,9 +61,7 @@ bus using the `python-can`_ package.
 .. code-block:: python
 
    >>> import can
-   >>> can.rc['interface'] = 'socketcan_ctypes'
-   >>> can.rc['channel'] = 'vcan0'
-   >>> can_bus = can.interface.Bus()
+   >>> can_bus = can.interface.Bus('vcan0', bustype='socketcan')
    >>> data = example_message.encode({'Temperature': 250.1, 'AverageRadius': 3.2, 'Enable': 1})
    >>> message = can.Message(arbitration_id=example_message.frame_id, data=data)
    >>> can_bus.send(message)
@@ -77,6 +81,9 @@ See `examples`_ for additional examples.
 
 Command line tool
 -----------------
+
+The decode subcommand
+^^^^^^^^^^^^^^^^^^^^^
 
 Decode CAN frames captured with the Linux program ``candump``.
 
@@ -111,6 +118,109 @@ Alternatively, the decoded message can be printed on a single line:
      vcan0  1F0   [8]  80 4A 0F 00 00 00 00 00 :: ExampleMessage(Enable: 'Enabled' -, AverageRadius: 0.0 m, Temperature: 255.92 degK)
      vcan0  1F0   [8]  80 4A 0F 00 00 00 00 00 :: ExampleMessage(Enable: 'Enabled' -, AverageRadius: 0.0 m, Temperature: 255.92 degK)
 
+The dump subcommand
+^^^^^^^^^^^^^^^^^^^
+
+Dump given database in a human readable format:
+
+.. code-block:: text
+
+   $ cantools dump tests/files/motohawk.dbc
+   ================================= Messages =================================
+
+     ------------------------------------------------------------------------
+
+     Name:       ExampleMessage
+     Id:         0x1f0
+     Length:     8 bytes
+     Cycle time: - ms
+     Senders:    PCM1
+     Layout:
+
+                             Bit
+
+                7   6   5   4   3   2   1   0
+              +---+---+---+---+---+---+---+---+
+            0 |<-x|<---------------------x|<--|
+              +---+---+---+---+---+---+---+---+
+                |                       +-- AverageRadius
+                +-- Enable
+              +---+---+---+---+---+---+---+---+
+            1 |-------------------------------|
+              +---+---+---+---+---+---+---+---+
+            2 |----------x|   |   |   |   |   |
+        B     +---+---+---+---+---+---+---+---+
+        y               +-- Temperature
+        t     +---+---+---+---+---+---+---+---+
+        e   3 |   |   |   |   |   |   |   |   |
+              +---+---+---+---+---+---+---+---+
+            4 |   |   |   |   |   |   |   |   |
+              +---+---+---+---+---+---+---+---+
+            5 |   |   |   |   |   |   |   |   |
+              +---+---+---+---+---+---+---+---+
+            6 |   |   |   |   |   |   |   |   |
+              +---+---+---+---+---+---+---+---+
+            7 |   |   |   |   |   |   |   |   |
+              +---+---+---+---+---+---+---+---+
+
+     Signal tree:
+
+       -- {root}
+          +-- Enable
+          +-- AverageRadius
+          +-- Temperature
+
+     Signal choices:
+
+       Enable
+           0 Disabled
+           1 Enabled
+
+     ------------------------------------------------------------------------
+
+The generate C source subcommand
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Generate `C` source code from given database. The generated code
+contains encode and decode functions for all messages.
+
+.. code-block:: text
+
+   $ cantools generate_c_source tests/files/motohawk.dbc
+   Successfully generated motohawk.h and motohawk.c.
+
+See `motohawk.h`_ and `motohawk.c`_ for the contents of the generated
+files.
+
+Known limitations:
+
+- No signal scaling.
+
+- Maximum signal size is 64 bits.
+
+The monitor subcommand
+^^^^^^^^^^^^^^^^^^^^^^
+
+Monitor CAN bus traffic in a text based user interface.
+
+.. code-block:: text
+
+   $ cantools monitor tests/files/motohawk.dbc
+
+.. image:: https://github.com/eerimoq/cantools/raw/master/docs/monitor.png
+
+The menu at the bottom of the monitor shows the available commands.
+
+- Quit: Quit the monitor. Ctrl-C can be used as well.
+
+- Filter: Only display messages matching given regular
+  expression. Press <Enter> to return to the menu from the filter
+  input line.
+
+- Play/Pause: Toggle between playing and paused (or running and freezed).
+
+- Reset: Reset the monitor to its initial state.
+
 Contributing
 ============
 
@@ -143,7 +253,7 @@ Contributing
 
 .. _small DBC-file: https://github.com/eerimoq/cantools/blob/master/tests/files/motohawk.dbc
 
-.. _python-can: https://python-can.readthedocs.io/en/latest/
+.. _python-can: https://python-can.readthedocs.io/en/master/
 
 .. _DBC: http://www.socialledge.com/sjsu/index.php?title=DBC_Format
 
@@ -151,10 +261,14 @@ Contributing
 
 .. _tester: http://cantools.readthedocs.io/en/latest/#cantools.tester.Tester
 
-.. _encoding: http://cantools.readthedocs.io/en/latest/#cantools.db.Message.encode
+.. _encoding: http://cantools.readthedocs.io/en/latest/#cantools.database.can.Message.encode
 
-.. _encode_message(): http://cantools.readthedocs.io/en/latest/#cantools.db.Database.encode_message
+.. _encode_message(): http://cantools.readthedocs.io/en/latest/#cantools.database.can.Database.encode_message
 
-.. _decodes: http://cantools.readthedocs.io/en/latest/#cantools.db.Database.decode_message
+.. _decodes: http://cantools.readthedocs.io/en/latest/#cantools.database.can.Database.decode_message
 
 .. _examples: https://github.com/eerimoq/cantools/blob/master/examples
+
+.. _motohawk.h: https://github.com/eerimoq/cantools/blob/master/tests/files/c_source/motohawk.h
+
+.. _motohawk.c: https://github.com/eerimoq/cantools/blob/master/tests/files/c_source/motohawk.c
